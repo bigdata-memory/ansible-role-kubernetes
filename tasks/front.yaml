@@ -54,6 +54,22 @@
         KUBECONFIG: /etc/kubernetes/admin.conf
   when: kube_network == 'weave'
 
+- name: Add Kube API server options
+  lineinfile:
+    dest: /etc/kubernetes/manifests/kube-apiserver.yaml
+    line: '    - {{item.option}}={{item.value}}'
+    regexp: '^    - {{item.option}}='
+    insertafter: '    - kube-apiserver'
+  notify: restart kubeapi
+  with_items: "{{ kube_apiserver_options }}"
+
+- name: Retry until ready
+  command: kubectl get node {{ inventory_hostname }}
+  register: res
+  until: res.rc == 0
+  retries: 10
+  delay: 5
+
 - include: helm.yaml
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf
@@ -65,15 +81,6 @@
     KUBECONFIG: /etc/kubernetes/admin.conf
   ignore_errors: yes
   when: kube_deploy_dashboard  
-
-- name: Add Kube API server options
-  lineinfile:
-    dest: /etc/kubernetes/manifests/kube-apiserver.yaml
-    line: '    - {{item.option}}={{item.value}}'
-    regexp: '^    - {{item.option}}='
-    insertafter: '    - kube-apiserver'
-  notify: restart kubeapi
-  with_items: "{{ kube_apiserver_options }}"
 
 - name: Ensures .kube dir exists
   file: 
@@ -94,6 +101,12 @@
     group={{ ansible_ssh_user }}
     owner={{ ansible_ssh_user }}
     recurse=yes
+
+- name: clones the kube example project
+  git:
+    repo: https://github.com/kubernetes/examples.git
+    dest: /home/{{ ansible_ssh_user }}/examples
+  become: no
 
 - copy:
     dest: /etc/profile.d/kube.sh
