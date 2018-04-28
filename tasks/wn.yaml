@@ -15,3 +15,8 @@
     insertafter: '\[Service\]'
   notify: restart kubelet
   when: kubelet_extra_args != ''
+
+- name: Set node role
+  command: kubectl label node {{ inventory_hostname }} node-role.kubernetes.io/node="true"
+  delegate_to: master
+

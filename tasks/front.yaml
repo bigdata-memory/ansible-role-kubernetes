@@ -75,6 +75,26 @@
   notify: restart kubeapi
   with_items: "{{ kube_apiserver_options }}"
 
+- name: Ensures .kube dir exists
+  file: 
+    path=/home/{{ ansible_ssh_user }}/.kube
+    state=directory
+
+- name: copy kube config file
+  copy: 
+    remote_src=yes
+    src=/etc/kubernetes/admin.conf
+    dest=/home/{{ ansible_ssh_user }}/.kube/config
+    group={{ ansible_ssh_user }}
+    owner={{ ansible_ssh_user }}
+
+- name: Ensures the group and owner of .kube
+  file: 
+    dest=/home/{{ ansible_ssh_user }}/.kube
+    group={{ ansible_ssh_user }}
+    owner={{ ansible_ssh_user }}
+    recurse=yes
+
 - copy:
     dest: /etc/profile.d/kube.sh
-    content: "export KUBECONFIG=/etc/kubernetes/admin.conf"
+    content: "export PH={{ ansible_ssh_user }}"
